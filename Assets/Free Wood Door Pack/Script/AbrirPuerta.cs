@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 
 public class AbrirPuerta : MonoBehaviour
 {
     public float velocidad = 2f;
     public float anguloAbierta = 150f;
+    public BoxCollider colliderBloqueo;
+    public NavMeshObstacle navMeshObstacle;
     private bool abierta = false;
     private bool jugadorCerca = false;
     private Quaternion rotacionCerrada;
@@ -19,7 +22,11 @@ public class AbrirPuerta : MonoBehaviour
     void Update()
     {
         if (jugadorCerca && Keyboard.current.eKey.wasPressedThisFrame)
+        {
             abierta = !abierta;
+            colliderBloqueo.enabled = !abierta;
+            navMeshObstacle.enabled = !abierta; // desactiva el obstáculo al abrir
+        }
 
         if (abierta)
             transform.rotation = Quaternion.Slerp(transform.rotation, rotacionAbierta, Time.deltaTime * velocidad);
