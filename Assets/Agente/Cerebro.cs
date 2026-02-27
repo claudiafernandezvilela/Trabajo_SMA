@@ -17,6 +17,9 @@ public class Cerebro : MonoBehaviour
     public bool JugadorEscuchado;
     [Header("Attack Settings")]
     public float distanciaAtaque = 1.5f;
+    [Header("Object Settings")]
+    public Transform objetoVigilado;
+    public Vector3 posicionObjeto;
 
     private int IndicePatrulla;
     private IEstado estadoActual;
@@ -24,6 +27,7 @@ public class Cerebro : MonoBehaviour
     void Start()
     {
         agente = GetComponent<NavMeshAgent>();
+        if (objetoVigilado != null) posicionObjeto = objetoVigilado.position;
         CambiarEstado(new Patrulla());
         SiguientePunto();
     }
