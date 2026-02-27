@@ -54,11 +54,50 @@ public class Buscar : IEstado
         {
             timer += UnityEngine.Time.deltaTime;
             if (timer >= cerebro.TiempoBusqueda)
-                cerebro.CambiarEstado(new Patrulla());
+                // Si tiene objeto vigilado, ir a revisarlo 
+                // (ns si cambiarlo pq realmente todos los agentes tienen objeto asigando)
+                if (cerebro.objetoVigilado != null)
+                    cerebro.CambiarEstado(new RevisarObjeto());
+                else
+                    cerebro.CambiarEstado(new Patrulla());
         }
 
         if (cerebro.JugadorVisible)
             cerebro.CambiarEstado(new Perseguir());
+    }
+}
+
+public class RevisarObjeto : IEstado
+{
+    private bool llegue = false;
+
+    public void Ejecutar(Cerebro cerebro)
+    {
+        if (!llegue)
+        {
+            cerebro.agente.SetDestination(cerebro.posicionObjeto);
+            llegue = true;
+        }
+
+        if (cerebro.JugadorVisible)
+        {
+            cerebro.CambiarEstado(new Perseguir());
+            return;
+        }
+
+        if (!cerebro.agente.pathPending && cerebro.agente.remainingDistance < 0.5f)
+        {
+            if (Objeto.fueRecogido)
+            {
+                // El objeto desapareció, seguir buscando al ladrón
+                cerebro.CambiarEstado(new Buscar());
+            }
+            else
+            {
+                // El objeto sigue ahí, volver a patrullar
+                cerebro.CambiarEstado(new Patrulla());
+            }
+        }
     }
 }
 
