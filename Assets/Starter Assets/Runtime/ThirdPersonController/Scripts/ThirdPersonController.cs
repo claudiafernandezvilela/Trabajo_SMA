@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -17,6 +17,11 @@ namespace StarterAssets
         [Header("Player")]
         [Tooltip("Move speed of the character in m/s")]
         public float MoveSpeed = 2.0f;
+
+        [Header("Interaction")]
+        public Transform holdPoint;      // punto donde se sujeta el objeto
+        public float interactDistance = 2f;
+        private GameObject heldObject;
 
         [Tooltip("Sprint speed of the character in m/s")]
         public float SprintSpeed = 5.335f;
@@ -63,43 +68,17 @@ namespace StarterAssets
         private Animator _animator;
         private CharacterController _controller;
         private StarterAssetsInputs _input;
-        private GameObject _mainCamera;
-
-        private const float _threshold = 0.01f;
-
         private bool _hasAnimator;
 
-        private bool IsCurrentDeviceMouse
-        {
-            get
-            {
-#if ENABLE_INPUT_SYSTEM
-                return _playerInput.currentControlScheme == "KeyboardMouse";
-#else
-				return false;
-#endif
-            }
-        }
-
-
-        private void Awake()
-        {
-            // get a reference to our main camera
-            if (_mainCamera == null)
-            {
-                _mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
-            }
-        }
-
         private void Start()
-        {            
+        {
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
 #if ENABLE_INPUT_SYSTEM
             _playerInput = GetComponent<PlayerInput>();
 #else
-			Debug.LogError( "Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
+            Debug.LogError("Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
 #endif
 
             AssignAnimationIDs();
@@ -112,11 +91,7 @@ namespace StarterAssets
 
             GroundedCheck();
             Move();
-        }
-
-        private void LateUpdate()
-        {
-
+            HandleInteraction();
         }
 
         private void AssignAnimationIDs()
@@ -140,9 +115,6 @@ namespace StarterAssets
                 _animator.SetBool(_animIDGrounded, Grounded);
             }
         }
-
-
-
         private void Move()
         {
             // set target speed based on move speed, sprint speed and if sprint is pressed
@@ -208,13 +180,6 @@ namespace StarterAssets
             }
         }
 
-        private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
-        {
-            if (lfAngle < -360f) lfAngle += 360f;
-            if (lfAngle > 360f) lfAngle -= 360f;
-            return Mathf.Clamp(lfAngle, lfMin, lfMax);
-        }
-
         private void OnDrawGizmosSelected()
         {
             Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
@@ -233,20 +198,73 @@ namespace StarterAssets
         {
             if (animationEvent.animatorClipInfo.weight > 0.5f)
             {
+                 Vector3 posicionSonido = transform.TransformPoint(_controller.center);
                 if (FootstepAudioClips.Length > 0)
                 {
                     var index = Random.Range(0, FootstepAudioClips.Length);
-                    AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
+                    AudioSource.PlayClipAtPoint(
+                        FootstepAudioClips[index],
+                        transform.TransformPoint(_controller.center),
+                        FootstepAudioVolume);
                 }
+                EmitirSonido(posicionSonido, FootstepAudioVolume);
             }
         }
-
+private void EmitirSonido(Vector3 posicion, float volumen)
+{
+    Audicion[] agentes = FindObjectsByType<Audicion>(FindObjectsSortMode.None);
+    foreach (Audicion agente in agentes)
+    {
+        agente.RecibirSonido(posicion, volumen);
+    }
+}
         private void OnLand(AnimationEvent animationEvent)
         {
             if (animationEvent.animatorClipInfo.weight > 0.5f)
             {
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
+        }
+
+        private void HandleInteraction()
+        {
+            if (_input.interact)
+            {
+                if (heldObject == null)
+                {
+                    TryPickUp();
+                }
+                else
+                {
+                    DropObject();
+                }
+
+                _input.interact = false; // evita repetición
+            }
+        }
+
+        private void TryPickUp()
+        {
+            Ray ray = new Ray(transform.position + Vector3.up, transform.forward);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, interactDistance))
+            {
+                if (hit.collider.CompareTag("Pickable"))
+                {
+                    heldObject = hit.collider.gameObject;
+
+                    heldObject.transform.SetParent(holdPoint);
+                    heldObject.transform.localPosition = Vector3.zero;
+                    heldObject.transform.localRotation = Quaternion.identity;
+                }
+            }
+        }
+
+        private void DropObject()
+        {
+            heldObject.transform.SetParent(null);
+            heldObject = null;
         }
     }
 }
