@@ -36,4 +36,10 @@ public class ModeloMundo : MonoBehaviour
         ultimaPosicionJugador = posicion;
         jugadorEscuchado = true;
     }
+
+    // Consume el flag de escucha para evitar que el reactivo lo procese en frames sucesivos (ruido reactivo).
+    public void ResetearEscucha()
+    {
+        jugadorEscuchado = false;
+    }
 }

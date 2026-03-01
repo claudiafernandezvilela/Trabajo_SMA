@@ -25,9 +25,6 @@ public class Audicion : Sensores
 public void RecibirSonido(Vector3 posicionSonido, float volumen)
 {
     float distancia = Vector3.Distance(transform.position, posicionSonido);
-
-    Debug.Log("Distancia: " + distancia + " Radio: " + radioEscucha);
-
     if (distancia <= radioEscucha)
     {
         cerebro.OnPlayerHeard(posicionSonido);

@@ -1,7 +1,9 @@
 using UnityEngine;
 
-public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto }
+public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto, AsegurarZona }
 
+// Capa deliberativa: gestiona metas a largo plazo y procesa eventos
+// que le notifican los estados a través del Cerebro.
 public class CerebroDeliberativo : MonoBehaviour
 {
     public Objetivo ObjetivoActual { get; private set; }
@@ -19,24 +21,33 @@ public class CerebroDeliberativo : MonoBehaviour
     public void EstablecerObjetivo(Objetivo nuevoObjetivo)
     {
         if (ObjetivoActual == nuevoObjetivo) return;
+        Debug.Log("Deliberativo: " + ObjetivoActual + " → " + nuevoObjetivo);
         ObjetivoActual = nuevoObjetivo;
         cerebro.CambiarEstadoPorObjetivo(nuevoObjetivo);
     }
 
-    public void BusquedaTerminada()
+    // Procesa los eventos notificados por el Cerebro en nombre de los Estados.
+    public void ProcesarEvento(Evento evento)
     {
-        Debug.Log("BusquedaTerminada - objetoVigilado: " + modelo.objetoVigilado);
-        if (modelo.objetoVigilado != null)
-            EstablecerObjetivo(Objetivo.RevisarObjeto);
-        else
-            EstablecerObjetivo(Objetivo.Patrullar);
-    }
+        switch (evento)
+        {
+            case Evento.BusquedaTerminada:
+                Debug.Log("Deliberativo: BusquedaTerminada - objetoVigilado: " + modelo.objetoVigilado);
+                if (modelo.objetoVigilado != null)
+                    EstablecerObjetivo(Objetivo.RevisarObjeto);
+                else
+                    EstablecerObjetivo(Objetivo.Patrullar);
+                break;
 
-    public void RevisionTerminada()
-    {
-        if (modelo.objetoRobado)
-            EstablecerObjetivo(Objetivo.Buscar);
-        else
-            EstablecerObjetivo(Objetivo.Patrullar);
+            case Evento.RevisionTerminada:
+                if (modelo.objetoRobado)
+                    EstablecerObjetivo(Objetivo.AsegurarZona);
+                else
+                    EstablecerObjetivo(Objetivo.Patrullar);
+                break;
+            case Evento.AsegurarZonaTerminada:
+                EstablecerObjetivo(Objetivo.Patrullar);
+                break;
+        }
     }
 }
