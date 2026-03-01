@@ -10,6 +10,7 @@ public class CerebroDeliberativo : MonoBehaviour
 
     private ModeloMundo modelo;
     private Cerebro cerebro;
+    private bool yaReviso = false;
 
     void Awake()
     {
@@ -33,18 +34,22 @@ public class CerebroDeliberativo : MonoBehaviour
         {
             case Evento.BusquedaTerminada:
                 Debug.Log("Deliberativo: BusquedaTerminada - objetoVigilado: " + modelo.objetoVigilado);
-                if (modelo.objetoVigilado != null)
+                if (yaReviso && modelo.objetoRobado)
+                    EstablecerObjetivo(Objetivo.AsegurarZona);
+                else if (modelo.objetoVigilado != null)
                     EstablecerObjetivo(Objetivo.RevisarObjeto);
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;
 
             case Evento.RevisionTerminada:
+                yaReviso = true; // ya revisó
                 if (modelo.objetoRobado)
                     EstablecerObjetivo(Objetivo.AsegurarZona);
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;
+
             case Evento.AsegurarZonaTerminada:
                 EstablecerObjetivo(Objetivo.Patrullar);
                 break;
