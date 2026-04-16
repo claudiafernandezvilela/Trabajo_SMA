@@ -35,7 +35,6 @@ public class Cerebro : MonoBehaviour
 
     void Update()
     {
-        reactivo.Evaluar();
         estadoActual?.Ejecutar(this);
     }
 
@@ -77,18 +76,25 @@ public class Cerebro : MonoBehaviour
     public void OnPlayerSeen(Transform playerTransform)
     {
         Modelo.ActualizarJugadorVisto(playerTransform);
+        reactivo.OnPlayerSeen(playerTransform);
     }
 
     public void OnPlayerLost()
     {
         Modelo.ActualizarJugadorPerdido();
+        reactivo.OnPlayerLost();
     }
 
     public void OnPlayerHeard(Vector3 soundPosition)
     {
         Modelo.ActualizarSonido(soundPosition);
+        reactivo.OnPlayerHeard(soundPosition); 
     }
 
+public void ObjetoRobado()
+{
+    Modelo.objetoRobado = true;
+}
     // Fin del juego
     public void AtraparJugador()
     {

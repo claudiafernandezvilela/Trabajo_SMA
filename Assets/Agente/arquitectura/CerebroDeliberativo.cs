@@ -43,9 +43,9 @@ public class CerebroDeliberativo : MonoBehaviour
                 break;
 
             case Evento.RevisionTerminada:
-                yaReviso = true; // ya revisó
-                if (modelo.objetoRobado)
-                    EstablecerObjetivo(Objetivo.AsegurarZona);
+                if (modelo.objetoRobado){
+                    yaReviso = true; // ya revisó
+                    EstablecerObjetivo(Objetivo.AsegurarZona);}
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;

@@ -15,32 +15,32 @@ public class CerebroReactivo : MonoBehaviour
         deliberativo = GetComponent<CerebroDeliberativo>();
         cerebro = GetComponent<Cerebro>();
     }
-    public void Evaluar()
+    public void OnPlayerSeen(Transform playerTransform)
+{
+    float distancia = Vector3.Distance(cerebro.transform.position, playerTransform.position);
+    if (distancia <= cerebro.distanciaAtaque)
     {
-        // Alta: jugador visible, perseguir siempre
-        if (modelo.jugadorVisible)
-        {
-            float distancia = Vector3.Distance(cerebro.transform.position, modelo.player.position);
-            if (distancia <= cerebro.distanciaAtaque)
-            {
-                cerebro.AtraparJugador();
-                return;
-            }
-            deliberativo.EstablecerObjetivo(Objetivo.Perseguir);
-            return;
-        }
-            // Perdió al jugador que perseguía → buscar
-            if (deliberativo.ObjetivoActual == Objetivo.Perseguir && !modelo.jugadorVisible)
-            {
-                Debug.Log("Reactivo: perdió al jugador → Buscar");
-                deliberativo.EstablecerObjetivo(Objetivo.Buscar);
-                return;
-            }
-            // Media: jugador escuchado, buscar si no hay algo más urgente
-            if (modelo.jugadorEscuchado && deliberativo.ObjetivoActual != Objetivo.Perseguir)
-            {
-                deliberativo.EstablecerObjetivo(Objetivo.Buscar);
-                modelo.ResetearEscucha();
-            }
-        }
+        cerebro.AtraparJugador();
+        return;
+    }
+    deliberativo.EstablecerObjetivo(Objetivo.Perseguir);
+}
+
+public void OnPlayerLost()
+{
+    if (deliberativo.ObjetivoActual == Objetivo.Perseguir)
+    {
+        Debug.Log("Reactivo: perdió al jugador → Buscar");
+        deliberativo.EstablecerObjetivo(Objetivo.Buscar);
+    }
+}
+
+public void OnPlayerHeard(Vector3 soundPosition)
+{
+    if (deliberativo.ObjetivoActual != Objetivo.Perseguir)
+    {
+        deliberativo.EstablecerObjetivo(Objetivo.Buscar);
+    }
+}
+
     }
