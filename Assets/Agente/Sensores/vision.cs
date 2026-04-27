@@ -9,6 +9,13 @@ public class Vision : Sensores
     public LayerMask obstacleLayer;
 
     private Transform playerTransformGizmo;
+    private ProcesarMensajes comunicacion; 
+
+    protected override void Awake()
+    {
+        base.Awake();
+        comunicacion = GetComponent<ProcesarMensajes>();
+    }
 
     void Update()
     {
@@ -72,8 +79,16 @@ protected override void Detect()
         bool enAngulo = angle <= visionAngle / 2f || dist < 1.5f;
         bool sinObstaculo = !Physics.Raycast(transform.position + Vector3.up, dir, dist, obstacleLayer);
 
-        if (enRango && enAngulo && sinObstaculo)
+        if (enRango && enAngulo && sinObstaculo){
             cerebro.ObjetoRobado(); //cambiar por null en vez de bool
+            // Inform en broadcast: el objeto vigilado ya no está en su posición
+            comunicacion?.EnviarMensaje(new MensajeFIPA(
+                    performativa : Performativa.Inform,
+                    emisor       : comunicacion.nombreAgente,
+                    receptor     : null,                        // broadcast
+                    contenido    : "objetoRobado",
+                    posicion     : cerebro.Modelo.posicionObjeto
+                ));}
     }
 }
     void OnDrawGizmos()
