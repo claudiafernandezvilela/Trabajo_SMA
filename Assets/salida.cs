@@ -1,22 +1,30 @@
 using UnityEngine;
 
-public class Salida : MonoBehaviour
+public class SalidaMapa : MonoBehaviour
 {
-private void OnTriggerEnter(Collider other)
-{
-    Debug.Log("Trigger tocado por: " + other.name + " tag: " + other.tag);
-    if (!other.transform.root.CompareTag("Player"))
-{
-    Debug.Log("No es el player, es: " + other.name);
-    return;
-}
-Debug.Log("Root: " + other.transform.root.name);
-    if (!other.CompareTag("Player")) return;
+    public float radioSalida = 3f;
+    private Transform player;
 
-    if (Objeto.fueRecogido)
+    void Start()
     {
-        Debug.Log("¡Victoria!");
-        Time.timeScale = 0f;
+        player = GameObject.FindGameObjectWithTag("Player").transform;
     }
-}
+
+    void Update()
+    {
+        if (player == null) return;
+
+        float distancia = Vector3.Distance(transform.position, player.position);
+        if (distancia <= radioSalida && Objeto.fueRecogido)
+        {
+            Debug.Log("Game Over - El ladrón escapó con el objeto");
+            Time.timeScale = 0f;
+        }
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, radioSalida);
+    }
 }
