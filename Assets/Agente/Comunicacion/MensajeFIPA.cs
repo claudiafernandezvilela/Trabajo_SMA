@@ -22,7 +22,9 @@ public enum Performativa
     NotUnderstood
 }
 
+/// <summary>
 /// Representa un mensaje según el estándar FIPA-ACL.
+/// </summary>
 [Serializable]
 public class MensajeFIPA
 {

@@ -98,6 +98,12 @@ public void ObjetoRobado()
 {
     Modelo.objetoRobado = true;
 }
+
+    /// Recibe el destino calculado por el gestor y activa BloquearSalida directamente.
+    public void CambiarABloquearSalida(Vector3 destino)
+    {
+        CambiarEstado(new BloquearSalida(destino));
+    }
     // Fin del juego
     public void AtraparJugador()
     {

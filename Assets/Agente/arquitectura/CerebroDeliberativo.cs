@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto, AsegurarZona }
+public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto, AsegurarZona, BloquearSalida }
 
 // Capa deliberativa: gestiona metas a largo plazo y procesa eventos
 // que le notifican los estados a través del Cerebro.
