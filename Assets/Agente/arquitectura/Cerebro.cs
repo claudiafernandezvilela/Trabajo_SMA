@@ -19,12 +19,14 @@ public class Cerebro : MonoBehaviour
     private int IndicePatrulla;
     private IEstado estadoActual;
     private CerebroReactivo reactivo;
+    private CapaComunicacion comunicacion;
 
     void Awake()
     {
         Modelo = GetComponent<ModeloMundo>();
         reactivo = GetComponent<CerebroReactivo>();
         Deliberativo = GetComponent<CerebroDeliberativo>();
+        comunicacion = GetComponent<CapaComunicacion>();
         agente = GetComponent<NavMeshAgent>();
     }
 
@@ -89,6 +91,7 @@ public class Cerebro : MonoBehaviour
     {
         Modelo.ActualizarSonido(soundPosition);
         reactivo.OnPlayerHeard(soundPosition); 
+        comunicacion.NotificarLadronEscuchado(soundPosition);
     }
 
 public void ObjetoRobado()
