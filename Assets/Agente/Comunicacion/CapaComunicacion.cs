@@ -107,8 +107,8 @@ public class CapaComunicacion : MonoBehaviour
         conv.TareasDisponibles.Add(new TareaData(TipoTarea.Buscar,          posicionLadron, Vector3.zero));
 
         conv.GestorId = NombreAgente;
-        conv.SetEstado(new EstadoCFP(), FaseContractNet.CFP);
         conversaciones[convId] = conv;
+        Transicion.A(this, conv, new EstadoCFP(), FaseContractNet.CFP);
 
         Debug.Log($"[{NombreAgente}] CFP conv:{convId} salida1:{salida1} salida2:{salida2}");
     }
@@ -141,8 +141,8 @@ public class CapaComunicacion : MonoBehaviour
             }
         }
 
-        conv.SetEstado(new EstadoPropose(msg.posicion, msg.conversationId), FaseContractNet.CFP);
         conversaciones[msg.conversationId] = conv;
+        Transicion.A(this, conv, new EstadoPropose(msg.posicion), FaseContractNet.CFP);
     }
 
     // ── punto de entrada de mensajes (llamado por ProcesarMensajes) ────────

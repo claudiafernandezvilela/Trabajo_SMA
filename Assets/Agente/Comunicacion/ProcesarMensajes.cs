@@ -82,7 +82,7 @@ public class ProcesarMensajes : MonoBehaviour
             if (registro.TryGetValue(mensaje.receptor, out ProcesarMensajes destino))
             {
                 destino.RecibirMensaje(mensaje);
-                Debug.Log($"[{nombreAgente}] ENVÍO → {mensaje}");
+                //Debug.Log($"[{nombreAgente}] ENVÍO → {mensaje}");
             }
             else
             {
@@ -98,7 +98,7 @@ public class ProcesarMensajes : MonoBehaviour
     {
         colaMensajes.Enqueue(mensaje);
         GuardarMensaje(mensaje);
-        Debug.Log($"[{nombreAgente}] RECIBIDO ← {mensaje}");
+        // Debug.Log($"[{nombreAgente}] RECIBIDO ← {mensaje}");
     }
 
     // ── procesado de la cola ───────────────────────────────────────────────

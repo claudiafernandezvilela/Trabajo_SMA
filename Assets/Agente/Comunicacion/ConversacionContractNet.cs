@@ -1,64 +1,51 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// Rol que tiene este agente en una conversación ContractNet concreta.
-/// El rol se fija al crear la conversación y no cambia.
 public enum RolContractNet { Gestor, Contratista }
 
-/// Registro de la propuesta de un contratista.
+/// Propuesta de un contratista para una tarea concreta.
 internal class RegistroPropuesta
 {
     public string emisor;
-    public float  puntuacion;   // menor = mejor (distancia al ladrón)
-    public bool   rechazado;    // true si ya se le envió RejectProposal
+    public float  puntuacion;  // distancia al destino específico de la tarea
 
     public RegistroPropuesta(string emisor, float puntuacion)
     {
-        this.emisor      = emisor;
-        this.puntuacion  = puntuacion;
-        this.rechazado   = false;
+        this.emisor     = emisor;
+        this.puntuacion = puntuacion;
     }
 }
 
 /// Estado de una conversación ContractNet en curso.
 /// No es MonoBehaviour: vive dentro de CapaComunicacion.
-/// Toda la lógica de transición está en los IEstadoConversacion;
-/// esta clase solo almacena los datos de la conversación.
 public class ConversacionContractNet
 {
     // ── identidad ──────────────────────────────────────────────────────────
-    public string          ConversationId  { get; }
-    public RolContractNet  Rol             { get; }
+    public string         ConversationId { get; }
+    public RolContractNet Rol            { get; }
 
-    // ── fase ───────────────────────────────────────────────────────────────
-    public FaseContractNet Fase            { get; private set; }
-
-    // ── estado activo (máquina de estados de la conversación) ──────────────
+    // ── fase y estado activo ───────────────────────────────────────────────
+    public FaseContractNet     Fase        { get; private set; }
     public IEstadoConversacion EstadoActual { get; private set; }
 
-    // ── datos de dominio (accesibles por los estados) ──────────────────────
-
-    /// Tareas disponibles en este ContractNet, ordenadas por prioridad.
-    /// Rellenas por el gestor al crear la conversación.
+    // ── datos de dominio ───────────────────────────────────────────────────
+    public string          GestorId          { get; set; }
     public List<TareaData> TareasDisponibles { get; } = new List<TareaData>();
+    public List<string>    AgentesContactados { get; } = new List<string>();
+    public float           Deadline          { get; set; }
 
-    /// Propuestas recibidas (solo el gestor las acumula).
-    internal List<RegistroPropuesta> Propuestas { get; } = new List<RegistroPropuesta>();
+    /// Propuestas agrupadas por índice de tarea.
+    /// Clave: índice en TareasDisponibles. Valor: lista de propuestas para esa tarea.
+    internal Dictionary<int, List<RegistroPropuesta>> PropuestasPorTarea { get; }
+        = new Dictionary<int, List<RegistroPropuesta>>();
 
-    /// Nombre del agente que inició el protocolo (el gestor).
-    /// Los contratistas lo usan para saber a quién enviar la propuesta.
-    public string GestorId { get; set; }
+    /// Total de propuestas recibidas (una por tarea por contratista).
+    /// El gestor espera AgentesContactados.Count * TareasDisponibles.Count propuestas
+    /// o hasta que expire el deadline.
+    public int TotalPropuestasRecibidas { get; private set; }
 
-    /// Agentes a los que se ha enviado el CFP (el gestor lleva la cuenta
-    /// para saber cuándo ha recibido todas las respuestas).
-    public List<string> AgentesContactados { get; } = new List<string>();
-
-    /// Número de agentes que ya han respondido (Propose o Refuse).
-    public int Respuestas { get; private set; }
-
-    /// Deadline: tiempo Unity a partir del cual el gestor adjudica
-    /// aunque no haya recibido todas las respuestas.
-    public float Deadline { get; set; }
+    private int TotalPropuestasEsperadas =>
+        AgentesContactados.Count * TareasDisponibles.Count;
 
     // ── constructor ────────────────────────────────────────────────────────
     public ConversacionContractNet(string conversationId, RolContractNet rol)
@@ -68,8 +55,7 @@ public class ConversacionContractNet
         Fase           = FaseContractNet.Idle;
     }
 
-    // ── transición de estado ───────────────────────────────────────────────
-    /// Cambia el estado activo de la conversación y actualiza la fase.
+    // ── transición ─────────────────────────────────────────────────────────
     public void SetEstado(IEstadoConversacion nuevoEstado, FaseContractNet nuevaFase)
     {
         Fase         = nuevaFase;
@@ -78,22 +64,28 @@ public class ConversacionContractNet
 
     // ── helpers para el gestor ─────────────────────────────────────────────
 
-    /// Registra una propuesta de un contratista.
-    public void RegistrarPropuesta(string emisor, float puntuacion)
+    /// Registra la propuesta de un contratista para una tarea concreta.
+    /// tareaIdx es el índice en TareasDisponibles.
+    public void RegistrarPropuesta(string emisor, int tareaIdx, float puntuacion)
     {
-        Propuestas.Add(new RegistroPropuesta(emisor, puntuacion));
-        Respuestas++;
+        if (!PropuestasPorTarea.ContainsKey(tareaIdx))
+            PropuestasPorTarea[tareaIdx] = new List<RegistroPropuesta>();
+
+        PropuestasPorTarea[tareaIdx].Add(new RegistroPropuesta(emisor, puntuacion));
+        TotalPropuestasRecibidas++;
+
+        Debug.Log($"[Conv {ConversationId}] Propuesta: {emisor} tarea[{tareaIdx}]" +
+                  $"={TareasDisponibles[tareaIdx].tipo} d={puntuacion:F2}");
     }
 
-    /// Marca que un contratista ha rechazado participar.
     public void RegistrarRechazo(string emisor)
     {
-        Respuestas++;
+        // Un rechazo cuenta como una propuesta por cada tarea disponible
+        TotalPropuestasRecibidas += TareasDisponibles.Count;
         Debug.Log($"[Conv {ConversationId}] {emisor} rechazó participar.");
     }
 
-    /// True cuando el gestor ya ha recibido respuesta de todos los contactados
-    /// O cuando ha expirado el deadline.
+    /// True cuando se han recibido todas las propuestas esperadas o expiró el deadline.
     public bool ListoParaAdjudicar =>
-        Respuestas >= AgentesContactados.Count || Time.time >= Deadline;
+        TotalPropuestasRecibidas >= TotalPropuestasEsperadas || Time.time >= Deadline;
 }
