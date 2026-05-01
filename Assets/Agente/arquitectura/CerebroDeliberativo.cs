@@ -27,12 +27,20 @@ public class CerebroDeliberativo : MonoBehaviour
         cerebro.CambiarEstadoPorObjetivo(nuevoObjetivo);
     }
 
+    // Actualiza el objetivo sin cambiar el estado de comportamiento.
+    // Usado cuando el Cerebro ya instanció directamente el estado (e.g. BloquearSalida).
+    public void ForzarObjetivo(Objetivo nuevoObjetivo)
+    {
+        ObjetivoActual = nuevoObjetivo;
+    }
+
     // Procesa los eventos notificados por el Cerebro en nombre de los Estados.
     public void ProcesarEvento(Evento evento)
     {
         switch (evento)
         {
             case Evento.BusquedaTerminada:
+                cerebro.NotificarTareaContractNetCompletada();
                 Debug.Log("Deliberativo: BusquedaTerminada - objetoVigilado: " + modelo.objetoVigilado);
                 if (yaReviso && modelo.objetoRobado)
                     EstablecerObjetivo(Objetivo.AsegurarZona);
@@ -44,13 +52,18 @@ public class CerebroDeliberativo : MonoBehaviour
 
             case Evento.RevisionTerminada:
                 if (modelo.objetoRobado){
-                    yaReviso = true; // ya revisó
+                    yaReviso = true;
                     EstablecerObjetivo(Objetivo.AsegurarZona);}
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;
 
             case Evento.AsegurarZonaTerminada:
+                EstablecerObjetivo(Objetivo.Patrullar);
+                break;
+
+            case Evento.BloquearSalidaTerminado:
+                cerebro.NotificarTareaContractNetCompletada();
                 EstablecerObjetivo(Objetivo.Patrullar);
                 break;
         }

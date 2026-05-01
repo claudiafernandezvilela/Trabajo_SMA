@@ -64,7 +64,6 @@ public class Cerebro : MonoBehaviour
             case Objetivo.AsegurarZona:
                 CambiarEstado(new AsegurarZona());
                 break;
-
         }
     }
 
@@ -94,16 +93,25 @@ public class Cerebro : MonoBehaviour
         comunicacion.NotificarLadronEscuchado(soundPosition);
     }
 
-public void ObjetoRobado()
-{
-    Modelo.objetoRobado = true;
-}
+    public void ObjetoRobado()
+    {
+        Modelo.objetoRobado = true;
+    }
 
     /// Recibe el destino calculado por el gestor y activa BloquearSalida directamente.
     public void CambiarABloquearSalida(Vector3 destino)
     {
+        Deliberativo.ForzarObjetivo(Objetivo.BloquearSalida);
         CambiarEstado(new BloquearSalida(destino));
     }
+
+    /// Cierra la conversación ContractNet activa enviando InformDone al gestor.
+    /// Llamado por CerebroDeliberativo cuando un estado de tarea ContractNet termina.
+    public void NotificarTareaContractNetCompletada()
+    {
+        comunicacion.NotificarTareaCompletada();
+    }
+
     // Fin del juego
     public void AtraparJugador()
     {

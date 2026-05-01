@@ -74,8 +74,8 @@ public class ConversacionContractNet
         PropuestasPorTarea[tareaIdx].Add(new RegistroPropuesta(emisor, puntuacion));
         TotalPropuestasRecibidas++;
 
-        Debug.Log($"[Conv {ConversationId}] Propuesta: {emisor} tarea[{tareaIdx}]" +
-                  $"={TareasDisponibles[tareaIdx].tipo} d={puntuacion:F2}");
+        //Debug.Log($"[Conv {ConversationId}] Propuesta: {emisor} tarea[{tareaIdx}]" +
+                  //$"={TareasDisponibles[tareaIdx].tipo} d={puntuacion:F2}");
     }
 
     public void RegistrarRechazo(string emisor)

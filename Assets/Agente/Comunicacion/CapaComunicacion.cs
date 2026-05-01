@@ -206,12 +206,27 @@ public class CapaComunicacion : MonoBehaviour
 
     // ── helpers ────────────────────────────────────────────────────────────
 
-    /// True si el reactivo está en un estado de alta prioridad
-    /// que impide al agente participar en el ContractNet.
+    /// Llamado por Cerebro cuando un estado de comportamiento ContractNet termina.
+    /// Busca la conversación activa en fase Ejecutando y envía InformDone al gestor.
+    public void NotificarTareaCompletada()
+    {
+        foreach (var conv in conversaciones.Values)
+        {
+            if (conv.Fase == FaseContractNet.Ejecutando && conv.EstadoActual is EstadoEjecutando ejec)
+            {
+                ejec.NotificarCompletada(this, conv);
+                return;
+            }
+        }
+    }
+
+    /// True si el agente está en un estado que le impide participar en un ContractNet.
     public bool EstaOcupado()
     {
-        // El agente no puede participar si está persiguiendo activamente al ladrón
-        return deliberativo.ObjetivoActual == Objetivo.Perseguir;
+        if (deliberativo.ObjetivoActual == Objetivo.Perseguir) return true;
+        foreach (var conv in conversaciones.Values)
+            if (conv.Fase == FaseContractNet.Ejecutando) return true;
+        return false;
     }
 
     /// True si ya existe una conversación activa en la que este agente es gestor.

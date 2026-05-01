@@ -52,7 +52,7 @@ public class EstadoAdjudicando : IEstadoConversacion
                 tarea.posicionLadron,
                 conv.ConversationId));
  
-            Debug.Log($"[{capa.NombreAgente}] Accept → {ganador} tarea:{tarea.tipo}");
+            //Debug.Log($"[{capa.NombreAgente}] Accept → {ganador} tarea:{tarea.tipo}");
  
             // Enviar Reject al resto que propusieron para esta tarea
             foreach (var p in propuestas)
