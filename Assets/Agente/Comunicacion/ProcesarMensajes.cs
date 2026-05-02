@@ -160,4 +160,18 @@ public class ProcesarMensajes : MonoBehaviour
     /// Lista de todos los agentes actualmente registrados.
     /// Usada por EstadoCFP para registrar los agentes contactados.
     public static IEnumerable<string> AgentesRegistrados() => registro.Keys;
+    /// Devuelve las últimas n posiciones del ladrón registradas en el historial
+    /// (de mensajes Inform propios y ajenos), ordenadas de más a menos reciente.
+    public List<(Vector3 pos, float t)> ObtenerHistorialPosicionesLadron(int n)
+    {
+        var resultado = new List<(Vector3, float t)>();
+        foreach (var msgs in historial.Values)
+            foreach (var m in msgs)
+                if ((m.contenido == "ladron_visto" || m.contenido == "ladron_escuchado")
+                    && m.posicion != Vector3.zero)
+                    resultado.Add((m.posicion, m.timestamp));
+
+        resultado.Sort((a, b) => b.t.CompareTo(a.t));
+        return resultado.Count > n ? resultado.GetRange(0, n) : resultado;
+    }
 }
