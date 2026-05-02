@@ -37,10 +37,8 @@ public void OnPlayerLost()
 
 public void OnPlayerHeard(Vector3 soundPosition)
 {
-    if (deliberativo.ObjetivoActual != Objetivo.Perseguir)
-    {
-        deliberativo.EstablecerObjetivo(Objetivo.Buscar);
-    }
+    // La respuesta a escuchar al ladrón la coordina el ContractNet.
+    // Solo OnPlayerSeen puede cambiar el comportamiento reactivamente.
 }
 
     }

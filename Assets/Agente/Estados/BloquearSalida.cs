@@ -15,14 +15,15 @@ public class BloquearSalida : IEstado
 
     public void Ejecutar(Cerebro cerebro)
     {
-        cerebro.agente.SetDestination(destino);
-
         if (llegado) return;
+        
+        cerebro.agente.SetDestination(destino);
 
         if (!cerebro.agente.pathPending && cerebro.agente.remainingDistance < 0.5f)
         {
             llegado = true;
-            Debug.Log($"[BloquearSalida] {cerebro.name} bloqueando puerta.");
+            cerebro.agente.ResetPath();
+            Debug.Log($"[BloquearSalida] {cerebro.name} bloqueando puerta en {destino}.");
             cerebro.NotificarEvento(Evento.BloquearSalidaTerminado);
         }
     }

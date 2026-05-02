@@ -32,8 +32,6 @@ public class CapaComunicacion : MonoBehaviour
     private readonly Dictionary<string, ConversacionContractNet> conversaciones
         = new Dictionary<string, ConversacionContractNet>();
 
-    // ── ciclo de vida Unity ────────────────────────────────────────────────
-
     void Awake()
     {
         Mensajes     = GetComponent<ProcesarMensajes>();
@@ -100,8 +98,8 @@ public class CapaComunicacion : MonoBehaviour
             Debug.LogWarning($"[{NombreAgente}] RegistroSalidas no encontrado en la escena.");
         }
 
-        // Tareas en orden de prioridad. posicionSalida ya calculada:
-        // el contratista ganador solo tiene que navegar a DestinoEjecucion.
+        // Las 3 tareas se distribuyen por competencia: el gestor también evalúa
+        // su distancia en EstadoAdjudicando y puede autoasignarse la que mejor domine.
         conv.TareasDisponibles.Add(new TareaData(TipoTarea.BloquearSalida1, posicionLadron, salida1));
         conv.TareasDisponibles.Add(new TareaData(TipoTarea.BloquearSalida2, posicionLadron, salida2));
         conv.TareasDisponibles.Add(new TareaData(TipoTarea.Buscar,          posicionLadron, Vector3.zero));
@@ -113,8 +111,7 @@ public class CapaComunicacion : MonoBehaviour
         Debug.Log($"[{NombreAgente}] CFP conv:{convId} salida1:{salida1} salida2:{salida2}");
     }
 
-    // ── ContractNet: receptor (contratista) ────────────────────────────────
-
+    // ContractNet: receptor (contratista)
     /// Crea una conversación como contratista al recibir un CFP.
     private void RecibirCFP(MensajeFIPA msg)
     {
@@ -225,7 +222,8 @@ public class CapaComunicacion : MonoBehaviour
     {
         if (deliberativo.ObjetivoActual == Objetivo.Perseguir) return true;
         foreach (var conv in conversaciones.Values)
-            if (conv.Fase == FaseContractNet.Ejecutando) return true;
+            if (conv.Fase == FaseContractNet.Ejecutando ||
+                conv.Fase == FaseContractNet.EsperandoComplecion) return true;
         return false;
     }
 

@@ -31,6 +31,7 @@ public class CerebroDeliberativo : MonoBehaviour
     // Usado cuando el Cerebro ya instanció directamente el estado (e.g. BloquearSalida).
     public void ForzarObjetivo(Objetivo nuevoObjetivo)
     {
+        Debug.Log("Deliberativo: " + ObjetivoActual + " → " + nuevoObjetivo);
         ObjetivoActual = nuevoObjetivo;
     }
 
@@ -64,7 +65,6 @@ public class CerebroDeliberativo : MonoBehaviour
 
             case Evento.BloquearSalidaTerminado:
                 cerebro.NotificarTareaContractNetCompletada();
-                EstablecerObjetivo(Objetivo.Patrullar);
                 break;
         }
     }

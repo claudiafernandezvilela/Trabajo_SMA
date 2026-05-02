@@ -5,7 +5,8 @@ public enum FaseContractNet
     CFP,          // Gestor emite CFP / Contratista lo recibe y evalúa
     Propose,      // Contratista envía propuesta / Gestor acumula respuestas
     Adjudicando,  // Gestor evalúa y decide
-    Ejecutando    // Contratista ganador ejecuta la tarea
+    Ejecutando,    // Contratista ganador ejecuta la tarea
+    EsperandoComplecion   // Gestor espera InformDone de los contratistas asignados
 }
 
 // Interfaz
