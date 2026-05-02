@@ -44,7 +44,7 @@ public class PerroPuertas : MonoBehaviour
                             Puerta))
         {
             AbrirPuerta puerta = hit.collider.GetComponent<AbrirPuerta>();
-        {
+            if (puerta == null) return;
             if (puerta.EstaAbierta)
             {
                 // Ya está abierta, pasar sin esperar
@@ -59,8 +59,8 @@ public class PerroPuertas : MonoBehaviour
                 esperandoPuerta = true;
             }
         }
-        }
     }
+
 
     void OnDrawGizmos()
     {

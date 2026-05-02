@@ -78,12 +78,14 @@ public class Cerebro : MonoBehaviour
     {
         Modelo.ActualizarJugadorVisto(playerTransform);
         reactivo.OnPlayerSeen(playerTransform);
+        comunicacion.NotificarLadronVisto(playerTransform.position);
     }
 
     public void OnPlayerLost()
     {
         Modelo.ActualizarJugadorPerdido();
         reactivo.OnPlayerLost();
+        comunicacion.NotificarLadronPerdido();
     }
 
     public void OnPlayerHeard(Vector3 soundPosition)
@@ -96,6 +98,11 @@ public class Cerebro : MonoBehaviour
     public void ObjetoRobado()
     {
         Modelo.objetoRobado = true;
+    }
+    
+    public void NotificarObjetoRobado()
+    {
+        comunicacion.NotificarObjetoRobadoBroadcast();
     }
 
     /// Recibe el destino calculado por el gestor y activa BloquearSalida directamente.

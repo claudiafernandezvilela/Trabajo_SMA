@@ -34,6 +34,9 @@ public class ConversacionContractNet
     public List<string>    AgentesContactados { get; } = new List<string>();
     public float           Deadline          { get; set; }
 
+    /// Si es false el gestor no entra en el pool de candidatos durante la adjudicación
+    public bool GestorCompite { get; set; } = true;
+
     /// Propuestas agrupadas por índice de tarea.
     /// Clave: índice en TareasDisponibles. Valor: lista de propuestas para esa tarea.
     internal Dictionary<int, List<RegistroPropuesta>> PropuestasPorTarea { get; }

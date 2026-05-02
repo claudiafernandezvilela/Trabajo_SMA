@@ -43,7 +43,7 @@ public class CerebroDeliberativo : MonoBehaviour
             case Evento.BusquedaTerminada:
                 cerebro.NotificarTareaContractNetCompletada();
                 Debug.Log("Deliberativo: BusquedaTerminada - objetoVigilado: " + modelo.objetoVigilado);
-                if (yaReviso && modelo.objetoRobado)
+                if (modelo.objetoRobado)
                     EstablecerObjetivo(Objetivo.AsegurarZona);
                 else if (modelo.objetoVigilado != null)
                     EstablecerObjetivo(Objetivo.RevisarObjeto);
@@ -54,6 +54,7 @@ public class CerebroDeliberativo : MonoBehaviour
             case Evento.RevisionTerminada:
                 if (modelo.objetoRobado){
                     yaReviso = true;
+                    cerebro.NotificarObjetoRobado();
                     EstablecerObjetivo(Objetivo.AsegurarZona);}
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);

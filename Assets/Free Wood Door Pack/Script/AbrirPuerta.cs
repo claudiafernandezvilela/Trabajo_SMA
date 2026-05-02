@@ -52,16 +52,16 @@ public class AbrirPuerta : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player")) jugadorCerca = true;
-        if (other.CompareTag("Agente")) agenteCerca = true;
+        if (other.GetComponent<NavMeshAgent>() != null) agenteCerca = true;
     }
 
     void OnTriggerExit(Collider other)
     {
         if (other.CompareTag("Player")) jugadorCerca = false;
-        if (other.CompareTag("Agente"))
+        if (other.GetComponent<NavMeshAgent>() != null)
         {
             agenteCerca = false;
-            Cerrar(); // cierra al salir el agente
+            Cerrar();
         }
     }
 }

@@ -8,13 +8,15 @@ public class EstadoAdjudicando : IEstadoConversacion
 {
     public void OnEntrar(CapaComunicacion capa, ConversacionContractNet conv)
     {
-        // El gestor evalúa su distancia a cada tarea y entra en el pool de candidatos.
-        for (int i = 0; i < conv.TareasDisponibles.Count; i++)
+        // El gestor evalúa su distancia y entra en el pool solo si debe competir.
+        if (conv.GestorCompite)
         {
-            TareaData tarea = conv.TareasDisponibles[i];
-
-            float distancia = Vector3.Distance(capa.transform.position, tarea.DestinoEjecucion);
-            conv.RegistrarPropuesta(capa.NombreAgente, i, distancia);
+             for (int i = 0; i < conv.TareasDisponibles.Count; i++)
+            {
+                TareaData tarea = conv.TareasDisponibles[i];
+                float distancia = Vector3.Distance(capa.transform.position, tarea.DestinoEjecucion);
+                conv.RegistrarPropuesta(capa.NombreAgente, i, distancia);
+            }
         }
 
         var asignados       = new HashSet<string>();

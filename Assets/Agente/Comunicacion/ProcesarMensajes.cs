@@ -121,10 +121,13 @@ public class ProcesarMensajes : MonoBehaviour
         ModeloMundo modelo = cerebro?.Modelo;
         if (modelo == null) return;
 
-        // Cualquier mensaje con posición válida actualiza la última posición conocida.
-        // Esto incluye el Inform de "ladron_escuchado" y el propio CFP.
+        // Posición del ladrón (escuchado o visto): actualiza última posición conocida.
         if (msg.posicion != Vector3.zero)
             modelo.ActualizarSonido(msg.posicion);
+        
+        // El objeto vigilado ha sido robado: actualizar base de conocimiento.
+        if (msg.contenido == "objeto_robado")
+            modelo.objetoRobado = true;
     }
 
     /// Delega el mensaje a CapaComunicacion para que gestione el protocolo.
