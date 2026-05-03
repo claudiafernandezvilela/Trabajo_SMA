@@ -74,14 +74,14 @@ public class Cerebro : MonoBehaviour
         Deliberativo.ProcesarEvento(evento);
     }
 
-    public void OnPlayerSeen(Transform playerTransform)
+    public virtual void OnPlayerSeen(Transform playerTransform)
     {
         Modelo.ActualizarJugadorVisto(playerTransform);
         reactivo.OnPlayerSeen(playerTransform);
         comunicacion.NotificarLadronVisto(playerTransform.position);
     }
 
-    public void OnPlayerLost()
+    public virtual void OnPlayerLost()
     {
         Modelo.ActualizarJugadorPerdido();
         reactivo.OnPlayerLost();
@@ -95,7 +95,7 @@ public class Cerebro : MonoBehaviour
         comunicacion.NotificarLadronEscuchado(soundPosition);
     }
 
-    public void ObjetoRobado()
+    public virtual void ObjetoRobado()
     {
         Modelo.objetoRobado = true;
     }

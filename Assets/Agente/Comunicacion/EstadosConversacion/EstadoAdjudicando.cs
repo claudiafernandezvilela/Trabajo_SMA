@@ -78,7 +78,7 @@ public class EstadoAdjudicando : IEstadoConversacion
                     "no_requerido", Vector3.zero,
                     cnet.ConversationId));
 
-                Debug.Log($"[{capa.NombreAgente}] Reject → {p.emisor} tarea:{tarea.tipo}");
+                // Debug.Log($"[{capa.NombreAgente}] Reject → {p.emisor} tarea:{tarea.tipo}");
             }
         }
 
