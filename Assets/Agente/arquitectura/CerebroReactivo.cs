@@ -23,7 +23,9 @@ public class CerebroReactivo : MonoBehaviour
         cerebro.AtraparJugador();
         return;
     }
-    deliberativo.EstablecerObjetivo(Objetivo.Perseguir);
+    Debug.Log("Reactivo: vio al jugador → Perseguir");
+    deliberativo.ForzarObjetivo(Objetivo.Perseguir);
+    cerebro.CambiarEstadoPorObjetivo(Objetivo.Perseguir);
 }
 
 public void OnPlayerLost()

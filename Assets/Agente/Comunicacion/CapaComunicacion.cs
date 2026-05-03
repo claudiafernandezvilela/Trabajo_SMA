@@ -185,7 +185,7 @@ public class CapaComunicacion : MonoBehaviour
             Vector3.zero,
             request.conversationId));
 
-        deliberativo.EstablecerObjetivo(Objetivo.AsegurarZona);
+        deliberativo.EstablecerObjetivo(Objetivo.BarrerMapa);
 
         var conv = new ConvRequest(request.conversationId, Iniciador: false);
         conv.InterlocutorId = request.emisor;

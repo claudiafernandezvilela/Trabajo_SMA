@@ -14,6 +14,8 @@ public class Cerebro : MonoBehaviour
     public float distanciaAtaque = 1.5f;
     [Header("Asegurar Zona")]
     public Transform[] PuntosAsegurarZona;
+    [Header("Barrer Mapa")]
+public Transform[] PuntosBarrido; 
     public ModeloMundo Modelo { get; private set; }
     public CerebroDeliberativo Deliberativo { get; private set; }
     private int IndicePatrulla;
@@ -63,6 +65,9 @@ public class Cerebro : MonoBehaviour
                 break;
             case Objetivo.AsegurarZona:
                 CambiarEstado(new AsegurarZona());
+                break;
+            case Objetivo.BarrerMapa:        
+                CambiarEstado(new BarrerMapa());
                 break;
         }
     }

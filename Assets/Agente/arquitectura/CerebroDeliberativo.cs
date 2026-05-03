@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto, AsegurarZona, BloquearSalida }
+public enum Objetivo { Patrullar, Perseguir, Buscar, RevisarObjeto, AsegurarZona, BloquearSalida, BarrerMapa}
 
 // Capa deliberativa: gestiona metas a largo plazo y procesa eventos
 // que le notifican los estados a través del Cerebro.
@@ -31,7 +31,6 @@ public class CerebroDeliberativo : MonoBehaviour
     // Usado cuando el Cerebro ya instanció directamente el estado (e.g. BloquearSalida).
     public void ForzarObjetivo(Objetivo nuevoObjetivo)
     {
-        Debug.Log("Deliberativo: " + ObjetivoActual + " → " + nuevoObjetivo);
         ObjetivoActual = nuevoObjetivo;
     }
 
@@ -77,6 +76,11 @@ public class CerebroDeliberativo : MonoBehaviour
             case Evento.BloquearSalidaExpiro:
                 if (!modelo.objetoRobado)
                     EstablecerObjetivo(Objetivo.Patrullar);
+                break;
+            // CerebroDeliberativo.ProcesarEvento
+            case Evento.BarridoTerminado:
+                cerebro.NotificarAsegurarZonaCompletada(); // envía InformDone al gestor del Request
+                EstablecerObjetivo(Objetivo.Patrullar);
                 break;
         }
     }

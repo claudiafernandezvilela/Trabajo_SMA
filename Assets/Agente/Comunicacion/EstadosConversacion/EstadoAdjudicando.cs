@@ -9,9 +9,12 @@ using UnityEngine;
 public class EstadoAdjudicando : IEstadoConversacion
 {
     private int informDonePendientes;
+    private float deadline;
+
 
     public void OnEntrar(CapaComunicacion capa, Conversacion conv)
     {
+        deadline = Time.time + 30f; // timeout de seguridad
         var cnet = (ConvCNet)conv;
 
         if (cnet.GestorCompite)
@@ -92,7 +95,10 @@ public class EstadoAdjudicando : IEstadoConversacion
             Transicion.A(capa, cnet, new EstadoIdle(), FaseContractNet.Idle);
     }
 
-    public void Ejecutar(CapaComunicacion capa, Conversacion conv) { }
+    public void Ejecutar(CapaComunicacion capa, Conversacion conv) { 
+        if (Time.time < deadline) return;
+        Debug.LogWarning($"[{capa.NombreAgente}] Timeout esperando InformDone");
+        Transicion.A(capa, (ConvCNet)conv, new EstadoIdle(), FaseContractNet.Idle);}
 
     public void OnMensaje(CapaComunicacion capa, Conversacion conv, MensajeFIPA msg)
     {

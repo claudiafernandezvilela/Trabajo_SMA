@@ -7,6 +7,7 @@ public enum Evento
     RevisionTerminada,
     AsegurarZonaTerminada,
     BloquearSalidaTerminado,
-    BloquearSalidaExpiro
+    BloquearSalidaExpiro, 
+    BarridoTerminado
 }
 
