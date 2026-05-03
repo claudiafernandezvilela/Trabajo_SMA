@@ -52,12 +52,14 @@ public class CerebroDeliberativo : MonoBehaviour
                 break;
 
             case Evento.RevisionTerminada:
-                if (modelo.objetoRobado){
+                if (modelo.objetoRobado)
+                {
                     yaReviso = true;
                     cerebro.NotificarObjetoRobado();
                     EstablecerObjetivo(Objetivo.AsegurarZona);
                     // Pedir a un agente libre que también asegure otra zona.
-                    cerebro.IniciarRequestAsegurar();}
+                    cerebro.IniciarRequestAsegurar();
+                }
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;
@@ -70,6 +72,11 @@ public class CerebroDeliberativo : MonoBehaviour
 
             case Evento.BloquearSalidaTerminado:
                 cerebro.NotificarTareaContractNetCompletada();
+                break;
+
+            case Evento.BloquearSalidaExpiro:
+                if (!modelo.objetoRobado)
+                    EstablecerObjetivo(Objetivo.Patrullar);
                 break;
         }
     }
