@@ -1,46 +1,33 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// Capa de comunicación de alto nivel.
-/// Responsabilidades:
-///   - Mantener las conversaciones activas de este agente (cualquier protocolo).
-///   - Tickear los estados de conversación en Update.
-///   - Recibir notificaciones de ProcesarMensajes y enrutarlas a la conversación correcta.
-///   - Exponer la API de dominio que el Cerebro invoca.
-///   - Notificar al Cerebro cuando se le asigna una tarea (callback OnTareaAsignada).
-///
-/// Lo que NO hace:
-///   - Nunca enruta mensajes directamente: siempre usa ProcesarMensajes.
-///   - Nunca decide qué comportamiento adoptar: eso lo decide Cerebro/Deliberativo.
-///   - No sabe nada de NavMesh, sensores ni de la lógica de juego.
 public class CapaComunicacion : MonoBehaviour
 {
-    // ── referencias ────────────────────────────────────────────────────────
-
     public ProcesarMensajes Mensajes { get; private set; }
     public string NombreAgente => Mensajes.nombreAgente;
 
-    private Cerebro             cerebro;
+    private Cerebro cerebro;
     private CerebroDeliberativo deliberativo;
 
-    // conversaciones activas
-    // Clave: conversationId. Valor: cualquier protocolo (CNet, QueryIf, Request).
+    // conversaciones activas → Clave: conversationId. Valor: cualquier protocolo (CNet, QueryIf, Request).
     private readonly Dictionary<string, Conversacion> conversaciones
         = new Dictionary<string, Conversacion>();
 
     // estado de visión
-    private bool  cfpVisionActivo = false;
+    // Flag que evita lanzar múltiples CFPs simultáneos cuando el agente está viendo al ladrón.
+    private bool cfpVisionActivo = false;
+    // Timestamp del último broadcast enviado. Inicializado en -999 para que el primero siempre pase el filtro.
     private float tiempoUltimaBroadcastPosicion = -999f;
+    //Throttle de 0.5 segundos entre broadcasts de posición, para no saturar la red.
     private const float IntervaloMinBroadcast = 0.5f;
 
     void Awake()
     {
-        Mensajes     = GetComponent<ProcesarMensajes>();
-        cerebro      = GetComponent<Cerebro>();
+        Mensajes = GetComponent<ProcesarMensajes>();
+        cerebro = GetComponent<Cerebro>();
         deliberativo = GetComponent<CerebroDeliberativo>();
     }
 
-    /// Tickea el estado activo de cada conversación; elimina las que ya terminaron.
     void Update()
     {
         var snapshot = new List<Conversacion>(conversaciones.Values);
@@ -52,6 +39,7 @@ public class CapaComunicacion : MonoBehaviour
         }
     }
 
+    // Eventos
     public void NotificarLadronEscuchado(Vector3 posicion)
     {
         Mensajes.EnviarMensaje(new MensajeFIPA(
@@ -100,12 +88,12 @@ public class CapaComunicacion : MonoBehaviour
         Debug.Log($"[{NombreAgente}] Broadcast: objeto_robado.");
     }
 
-    // ContractNet: iniciador (gestor)
+    // Lógica del Contract Net
     private void IniciarCFP(List<TareaData> tareas, bool gestorCompite)
     {
         string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
         var conv = new ConvCNet(convId, RolContractNet.Gestor);
-        conv.GestorId      = NombreAgente;
+        conv.GestorId = NombreAgente;
         conv.GestorCompite = gestorCompite;
         foreach (var t in tareas) conv.TareasDisponibles.Add(t);
         conversaciones[convId] = conv;
@@ -113,7 +101,6 @@ public class CapaComunicacion : MonoBehaviour
         Debug.Log($"[{NombreAgente}] CFP conv:{convId} tareas:{tareas.Count} gestorCompite:{gestorCompite}");
     }
 
-    // ContractNet: receptor (contratista)
     private void RecibirCFP(MensajeFIPA msg)
     {
         if (conversaciones.ContainsKey(msg.conversationId))
@@ -121,10 +108,8 @@ public class CapaComunicacion : MonoBehaviour
             Debug.LogWarning($"[{NombreAgente}] CFP duplicado conv:{msg.conversationId}");
             return;
         }
-
         var conv = new ConvCNet(msg.conversationId, RolContractNet.Contratista);
         conv.GestorId = msg.emisor;
-
         if (!string.IsNullOrEmpty(msg.contenido))
         {
             foreach (string tareaStr in msg.contenido.Split(';'))
@@ -133,69 +118,12 @@ public class CapaComunicacion : MonoBehaviour
                 if (t != null) conv.TareasDisponibles.Add(t);
             }
         }
-
         conversaciones[msg.conversationId] = conv;
         Transicion.A(this, conv, new EstadoPropose(msg.posicion), FaseContractNet.CFP);
     }
 
-    public void OnMensajeRecibido(MensajeFIPA msg)
-    {
-        if (msg.performativa == Performativa.Inform &&
-            (msg.contenido == "ladron_escuchado" ||
-             msg.contenido == "ladron_visto"     ||
-             msg.contenido == "objeto_robado"))
-            return;
-
-        if (msg.performativa == Performativa.CFP)
-        {
-            RecibirCFP(msg);
-            return;
-        }
-
-        if (msg.performativa == Performativa.QueryIf && msg.contenido == "ladron_cercano")
-        {
-            ResponderQueryBusqueda(msg);
-            return;
-        }
-
-        if (msg.performativa == Performativa.Request && msg.contenido == "asegurar_zona")
-        {
-            ResponderRequest(msg);
-            return;
-        }
-
-        if (!conversaciones.TryGetValue(msg.conversationId, out var conv))
-        {
-            if (msg.performativa != Performativa.InformDone)
-                Debug.LogWarning($"[{NombreAgente}] Mensaje para conv desconocida:{msg.conversationId}");
-            return;
-        }
-
-        conv.EstadoActual?.OnMensaje(this, conv, msg);
-
-        if (conv.Terminada)
-            conversaciones.Remove(conv.ConversationId);
-    }
-
-    // callback hacia Cerebro
-    public void OnTareaAsignada(TareaData tarea)
-    {
-        Debug.Log($"[{NombreAgente}] Tarea asignada: {tarea.tipo} destino:{tarea.DestinoEjecucion}");
-
-        switch (tarea.tipo)
-        {
-            case TipoTarea.BloquearSalida1:
-            case TipoTarea.BloquearSalida2:
-                cerebro.CambiarABloquearSalida(tarea.DestinoEjecucion);
-                break;
-            case TipoTarea.Buscar:
-                deliberativo.EstablecerObjetivo(Objetivo.Buscar);
-                break;
-        }
-    }
-
-    // QueryIf: búsqueda colaborativa
-    public void IniciarQueryBusqueda()
+    // Lógica QueryIf
+    public void IniciarQuery()
     {
         string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
         var conv = new ConvQueryIf(convId);
@@ -203,7 +131,7 @@ public class CapaComunicacion : MonoBehaviour
         Transicion.A(this, conv, new QueryIf());
     }
 
-    private void ResponderQueryBusqueda(MensajeFIPA query)
+    private void ResponderQuery(MensajeFIPA query)
     {
         const float umbralSegundos = 5f;
         bool tieneInfo = cerebro.Modelo.ultimaPosicionJugador != Vector3.zero
@@ -225,11 +153,11 @@ public class CapaComunicacion : MonoBehaviour
         cerebro.OnResultadoQueryBusqueda(encontrado, posicion);
     }
 
-    // Request: asegurar zona adicional
+    // LógicaRequest
     public void IniciarRequestAsegurar()
     {
         string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
-        var conv = new ConvRequest(convId, esIniciador: true);
+        var conv = new ConvRequest(convId, Iniciador: true);
         conversaciones[convId] = conv;
         Transicion.A(this, conv, new Request());
     }
@@ -259,7 +187,7 @@ public class CapaComunicacion : MonoBehaviour
 
         deliberativo.EstablecerObjetivo(Objetivo.AsegurarZona);
 
-        var conv = new ConvRequest(request.conversationId, esIniciador: false);
+        var conv = new ConvRequest(request.conversationId, Iniciador: false);
         conv.InterlocutorId = request.emisor;
         conversaciones[request.conversationId] = conv;
         Transicion.A(this, conv, new EjecutarRequest());
@@ -270,7 +198,7 @@ public class CapaComunicacion : MonoBehaviour
     {
         foreach (var conv in conversaciones.Values)
         {
-            if (conv is ConvRequest req && !req.EsIniciador
+            if (conv is ConvRequest req && !req.Iniciador
                 && conv.EstadoActual is EjecutarRequest ejec)
             {
                 ejec.NotificarCompletada(this, conv);
@@ -290,6 +218,57 @@ public class CapaComunicacion : MonoBehaviour
                 ejec.NotificarCompletada(this, cnet);
                 return;
             }
+        }
+    }
+
+    // Lógica de todos lo mensajes recibidos
+    public void OnMensajeRecibido(MensajeFIPA msg)
+    {
+        if (msg.performativa == Performativa.Inform &&
+            (msg.contenido == "ladron_escuchado" ||
+             msg.contenido == "ladron_visto" ||
+             msg.contenido == "objeto_robado"))
+            return;
+        if (msg.performativa == Performativa.CFP)
+        {
+            RecibirCFP(msg);
+            return;
+        }
+        if (msg.performativa == Performativa.QueryIf && msg.contenido == "ladron_cercano")
+        {
+            ResponderQuery(msg);
+            return;
+        }
+        if (msg.performativa == Performativa.Request && msg.contenido == "asegurar_zona")
+        {
+            ResponderRequest(msg);
+            return;
+        }
+        if (!conversaciones.TryGetValue(msg.conversationId, out var conv))
+        {
+            if (msg.performativa != Performativa.InformDone)
+                Debug.LogWarning($"[{NombreAgente}] Mensaje para conv desconocida:{msg.conversationId}");
+            return;
+        }
+        conv.EstadoActual?.OnMensaje(this, conv, msg);
+
+        if (conv.Terminada)
+            conversaciones.Remove(conv.ConversationId);
+    }
+
+    // callback hacia Cerebro
+    public void OnTareaAsignada(TareaData tarea)
+    {
+        // Debug.Log($"[{NombreAgente}] Tarea asignada: {tarea.tipo} destino:{tarea.DestinoEjecucion}");
+        switch (tarea.tipo)
+        {
+            case TipoTarea.BloquearSalida1:
+            case TipoTarea.BloquearSalida2:
+                cerebro.CambiarABloquearSalida(tarea.DestinoEjecucion);
+                break;
+            case TipoTarea.Buscar:
+                deliberativo.EstablecerObjetivo(Objetivo.Buscar);
+                break;
         }
     }
 

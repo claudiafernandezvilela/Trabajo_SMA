@@ -3,7 +3,6 @@ using UnityEngine;
 
 public enum RolContractNet { Gestor, Contratista }
 
-/// Proposal from a contractor for a specific task.
 internal class RegistroPropuesta
 {
     public string emisor;
@@ -16,22 +15,15 @@ internal class RegistroPropuesta
     }
 }
 
-/// State of an active ContractNet conversation.
-/// Not a MonoBehaviour — lives inside CapaComunicacion.
 public class ConvCNet : Conversacion
 {
-    // ── identidad ──────────────────────────────────────────────────────────
     public RolContractNet  Rol  { get; }
     public FaseContractNet Fase { get; private set; }
-
-    /// Alias for InterlocutorId, kept for readability in CNet-specific code.
     public string GestorId
     {
         get => InterlocutorId;
         set => InterlocutorId = value;
     }
-
-    // ── datos de dominio ───────────────────────────────────────────────────
     public List<TareaData> TareasDisponibles  { get; } = new List<TareaData>();
     public List<string>    AgentesContactados { get; } = new List<string>();
     public float           Deadline           { get; set; }
@@ -45,7 +37,6 @@ public class ConvCNet : Conversacion
     private int TotalPropuestasEsperadas =>
         AgentesContactados.Count * TareasDisponibles.Count;
 
-    // ── constructor ────────────────────────────────────────────────────────
     public ConvCNet(string conversationId, RolContractNet rol)
         : base(conversationId)
     {
@@ -53,20 +44,16 @@ public class ConvCNet : Conversacion
         Fase = FaseContractNet.Idle;
     }
 
-    // ── transición ─────────────────────────────────────────────────────────
-    /// CNet overload: sets both the state and the protocol phase.
     public void SetEstado(IEstadoConversacion nuevoEstado, FaseContractNet nuevaFase)
     {
         Fase = nuevaFase;
         base.SetEstado(nuevoEstado);
     }
 
-    // ── BloqueaAgente ──────────────────────────────────────────────────────
-    /// Blocks the agent while adjudicating (waiting for InformDone) or executing.
-    public override bool BloqueaAgente() =>
-        Fase == FaseContractNet.Ejecutando || Fase == FaseContractNet.Adjudicando;
+    // Bloquea en Adjudicando (espera a InformDone) y Ejecutando
+    public override bool BloqueaAgente() =>   Rol == RolContractNet.Contratista? Fase == FaseContractNet.Propose
+        || Fase == FaseContractNet.Ejecutando : Fase == FaseContractNet.Adjudicando;
 
-    // ── helpers para el gestor ─────────────────────────────────────────────
     public void RegistrarPropuesta(string emisor, int tareaIdx, float puntuacion)
     {
         if (!PropuestasPorTarea.ContainsKey(tareaIdx))
@@ -79,7 +66,7 @@ public class ConvCNet : Conversacion
     public void RegistrarRechazo(string emisor)
     {
         TotalPropuestasRecibidas += TareasDisponibles.Count;
-        Debug.Log($"[Conv {ConversationId}] {emisor} rechazó participar.");
+        // Debug.Log($"[Conv {ConversationId}] {emisor} rechazó participar.");
     }
 
     public bool ListoParaAdjudicar =>

@@ -68,7 +68,6 @@ public class Cerebro : MonoBehaviour
     }
 
     // Notificación sensores 
-
     public void NotificarEvento(Evento evento)
     {
         Deliberativo.ProcesarEvento(evento);
@@ -118,8 +117,7 @@ public class Cerebro : MonoBehaviour
     {
         comunicacion.NotificarTareaCompletada();
     }
-    /// Combina el historial de Informs con la predicción de ModeloMundo
-    /// para obtener la posición donde probablemente esté el ladrón ahora.
+    /// Combina el historial de Informs con la predicción de ModeloMundo para obtener la posición donde probablemente esté el ladrón ahora.
     public Vector3 ObtenerPosicionPredichaLadron()
     {
         var hist = comunicacion.Mensajes.ObtenerHistorialPosicionesLadron(3);
@@ -128,9 +126,9 @@ public class Cerebro : MonoBehaviour
 
     /// Inicia una conversación QueryIf preguntando a otros agentes si ven al ladrón.
     /// Llamado por Buscar cuando expira el timer sin encontrarlo.
-    public void IniciarQueryBusqueda()
+    public void IniciarQuery()
     {
-        comunicacion.IniciarQueryBusqueda();
+        comunicacion.IniciarQuery();
     }
 
     /// Callback de CapaComunicacion con el resultado del QueryIf.
@@ -162,7 +160,6 @@ public class Cerebro : MonoBehaviour
     {
         comunicacion.NotificarAsegurarZonaCompletada();
     }
-
 
     // Fin del juego
     public void AtraparJugador()

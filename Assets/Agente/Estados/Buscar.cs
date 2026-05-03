@@ -27,7 +27,7 @@ public class Buscar : IEstado
             if (timer >= cerebro.TiempoBusqueda && !queryIniciada)
             {
                 queryIniciada = true;
-                cerebro.IniciarQueryBusqueda();
+                cerebro.IniciarQuery();
             }
         }
     }

@@ -32,7 +32,7 @@ public class Request : IEstadoConversacion
         var r = (ConvRequest)conv;
         if (r.RespuestasRecibidas < r.RespuestasEsperadas && Time.time < r.Deadline) return;
 
-        if (!r.AlguienAceptó)
+        if (!r.AlguienAcepto)
             Debug.LogWarning($"[{capa.NombreAgente}] Ningún agente libre para asegurar zona adicional.");
         Transicion.A(capa, conv, new EstadoIdle());
     }
@@ -44,7 +44,7 @@ public class Request : IEstadoConversacion
         switch (msg.performativa)
         {
             case Performativa.Agree:
-                r.AlguienAceptó = true;
+                r.AlguienAcepto = true;
                 r.RespuestasRecibidas++;
                 Debug.Log($"[{capa.NombreAgente}] {msg.emisor} Agree asegurar_zona");
                 break;
