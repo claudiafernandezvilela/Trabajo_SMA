@@ -6,14 +6,15 @@ using UnityEngine;
 // OnMensaje: acumula Propose / Refuse.
 public class EstadoCFP : IEstadoConversacion
 {
-    public void OnEntrar(CapaComunicacion capa, ConversacionContractNet conv)
+    public void OnEntrar(CapaComunicacion capa, Conversacion conv)
     {
+        var cnet = (ConvCNet)conv;
         var partes = new List<string>();
-        foreach (var t in conv.TareasDisponibles)
+        foreach (var t in cnet.TareasDisponibles)
             partes.Add(t.Serializar());
  
-        Vector3 posLadron = conv.TareasDisponibles.Count > 0
-            ? conv.TareasDisponibles[0].posicionLadron
+        Vector3 posLadron = cnet.TareasDisponibles.Count > 0
+            ? cnet.TareasDisponibles[0].posicionLadron
             : Vector3.zero;
  
         var cfp = new MensajeFIPA(
@@ -22,27 +23,29 @@ public class EstadoCFP : IEstadoConversacion
             null,
             string.Join(";", partes),
             posLadron,
-            conv.ConversationId);
+            cnet.ConversationId);
  
         foreach (string agente in ProcesarMensajes.AgentesRegistrados())
             if (agente != capa.NombreAgente)
-                conv.AgentesContactados.Add(agente);
+                cnet.AgentesContactados.Add(agente);
  
         capa.Mensajes.EnviarMensaje(cfp);
-        conv.Deadline = Time.time + 2f;
+        cnet.Deadline = Time.time + 2f;
  
-        Debug.Log($"[{capa.NombreAgente}] CFP emitido {conv.TareasDisponibles.Count} tareas" +
-                  $" → conv:{conv.ConversationId}");
+        Debug.Log($"[{capa.NombreAgente}] CFP emitido {cnet.TareasDisponibles.Count} tareas" +
+                  $" → conv:{cnet.ConversationId}");
     }
  
-    public void Ejecutar(CapaComunicacion capa, ConversacionContractNet conv)
+    public void Ejecutar(CapaComunicacion capa, Conversacion conv)
     {
-        if (!conv.ListoParaAdjudicar) return;
-        Transicion.A(capa, conv, new EstadoAdjudicando(), FaseContractNet.Adjudicando);
+        var cnet = (ConvCNet)conv;
+        if (!cnet.ListoParaAdjudicar) return;
+                Transicion.A(capa, cnet, new EstadoAdjudicando(), FaseContractNet.Adjudicando);
     }
  
-    public void OnMensaje(CapaComunicacion capa, ConversacionContractNet conv, MensajeFIPA msg)
+    public void OnMensaje(CapaComunicacion capa, Conversacion conv, MensajeFIPA msg)
     {
+        var cnet = (ConvCNet)conv;
         if (msg.performativa == Performativa.Propose)
         {
             // Formato contenido: "tareaIdx|puntuacion"
@@ -51,7 +54,7 @@ public class EstadoCFP : IEstadoConversacion
                 && int.TryParse(partes[0], out int tareaIdx)
                 && float.TryParse(partes[1], out float puntuacion))
             {
-                conv.RegistrarPropuesta(msg.emisor, tareaIdx, puntuacion);
+                cnet.RegistrarPropuesta(msg.emisor, tareaIdx, puntuacion);
             }
             else
             {
@@ -60,7 +63,7 @@ public class EstadoCFP : IEstadoConversacion
         }
         else if (msg.performativa == Performativa.Refuse)
         {
-            conv.RegistrarRechazo(msg.emisor);
+            cnet.RegistrarRechazo(msg.emisor);
         }
     }
 }

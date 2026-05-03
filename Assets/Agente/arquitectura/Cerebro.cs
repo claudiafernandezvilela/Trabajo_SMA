@@ -118,6 +118,51 @@ public class Cerebro : MonoBehaviour
     {
         comunicacion.NotificarTareaCompletada();
     }
+    /// Combina el historial de Informs con la predicción de ModeloMundo
+    /// para obtener la posición donde probablemente esté el ladrón ahora.
+    public Vector3 ObtenerPosicionPredichaLadron()
+    {
+        var hist = comunicacion.Mensajes.ObtenerHistorialPosicionesLadron(3);
+        return Modelo.PredecirPosicionLadron(hist);
+    }
+
+    /// Inicia una conversación QueryIf preguntando a otros agentes si ven al ladrón.
+    /// Llamado por Buscar cuando expira el timer sin encontrarlo.
+    public void IniciarQueryBusqueda()
+    {
+        comunicacion.IniciarQueryBusqueda();
+    }
+
+    /// Callback de CapaComunicacion con el resultado del QueryIf.
+    /// Si alguien lo vio, reinicia Buscar hacia la nueva posición; si no, termina la búsqueda.
+    public void OnResultadoQueryBusqueda(bool encontrado, Vector3 posicion)
+    {
+        if (Deliberativo.ObjetivoActual != Objetivo.Buscar) return;
+        if (encontrado)
+        {
+            Modelo.ActualizarSonido(posicion);
+            CambiarEstado(new Buscar());
+        }
+        else
+        {
+            Deliberativo.ProcesarEvento(Evento.BusquedaTerminada);
+        }
+    }
+
+    /// Inicia un Request pidiendo a otro agente libre que también asegure la zona.
+    /// Llamado por CerebroDeliberativo cuando se confirma que el objeto fue robado.
+    public void IniciarRequestAsegurar()
+    {
+        comunicacion.IniciarRequestAsegurar();
+    }
+
+    /// Notifica a CapaComunicacion que AsegurarZona terminó,
+    /// para que el receptor del Request pueda enviar InformDone.
+    public void NotificarAsegurarZonaCompletada()
+    {
+        comunicacion.NotificarAsegurarZonaCompletada();
+    }
+
 
     // Fin del juego
     public void AtraparJugador()

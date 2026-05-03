@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// Capa de comunicación de alto nivel.
 /// Responsabilidades:
-///   - Mantener las conversaciones ContractNet activas de este agente.
+///   - Mantener las conversaciones activas de este agente (cualquier protocolo).
 ///   - Tickear los estados de conversación en Update.
 ///   - Recibir notificaciones de ProcesarMensajes y enrutarlas a la conversación correcta.
 ///   - Exponer la API de dominio que el Cerebro invoca.
@@ -17,31 +17,21 @@ public class CapaComunicacion : MonoBehaviour
 {
     // ── referencias ────────────────────────────────────────────────────────
 
-    /// Acceso público para que los estados de conversación puedan enviar mensajes.
     public ProcesarMensajes Mensajes { get; private set; }
-
-    /// Nombre de este agente (delegado a ProcesarMensajes para evitar duplicidad).
     public string NombreAgente => Mensajes.nombreAgente;
 
-    private Cerebro           cerebro;
+    private Cerebro             cerebro;
     private CerebroDeliberativo deliberativo;
 
-    // ── conversaciones activas ─────────────────────────────────────────────
-    // Clave: conversationId. Un agente puede estar en varias conversaciones a la vez
-    // (p.ej. como contratista en una y como gestor en otra).
-    private readonly Dictionary<string, ConversacionContractNet> conversaciones
-        = new Dictionary<string, ConversacionContractNet>();
+    // conversaciones activas
+    // Clave: conversationId. Valor: cualquier protocolo (CNet, QueryIf, Request).
+    private readonly Dictionary<string, Conversacion> conversaciones
+        = new Dictionary<string, Conversacion>();
 
-    // ── estado de visión ───────────────────────────────────────────────────
-
-    /// Evita lanzar un segundo CFP de visión mientras el primero sigue activo.
+    // estado de visión
     private bool  cfpVisionActivo = false;
-
-    /// Rate-limit: segundos mínimos entre broadcasts de posición del ladrón.
     private float tiempoUltimaBroadcastPosicion = -999f;
     private const float IntervaloMinBroadcast = 0.5f;
-
-    // ── ciclo de vida Unity ────────────────────────────────────────────────
 
     void Awake()
     {
@@ -50,19 +40,18 @@ public class CapaComunicacion : MonoBehaviour
         deliberativo = GetComponent<CerebroDeliberativo>();
     }
 
-    /// Tickea el estado activo de cada conversación viva.
+    /// Tickea el estado activo de cada conversación; elimina las que ya terminaron.
     void Update()
     {
-        foreach (var conv in conversaciones.Values)
+        var snapshot = new List<Conversacion>(conversaciones.Values);
+        foreach (var conv in snapshot)
+        {
             conv.EstadoActual?.Ejecutar(this, conv);
+            if (conv.Terminada)
+                conversaciones.Remove(conv.ConversationId);
+        }
     }
 
-    // ── API pública de dominio ─────────────────────────────────────────────
-
-    /// Llamado por Cerebro.OnPlayerHeard.
-    /// 1) Emite un Inform broadcast para que todos actualicen su ModeloMundo.
-    /// 2) Inicia un ContractNet como gestor con 3 tareas (BS1, BS2, Buscar).
-    ///    El gestor también compite por las tareas.
     public void NotificarLadronEscuchado(Vector3 posicion)
     {
         Mensajes.EnviarMensaje(new MensajeFIPA(
@@ -79,13 +68,8 @@ public class CapaComunicacion : MonoBehaviour
         }, gestorCompite: true);
     }
 
-    /// Llamado por Cerebro.OnPlayerSeen cada frame (rate-limited internamente).
-    /// 1) Emite un Inform broadcast con la posición actual del ladrón.
-    /// 2) Inicia un ContractNet con 2 tareas (BS1, BS2) si no hay uno activo.
-    ///    El gestor NO compite porque está persiguiendo al ladrón.
     public void NotificarLadronVisto(Vector3 posicion)
     {
-        // Broadcast de posición con rate-limit para no saturar la red.
         if (Time.time - tiempoUltimaBroadcastPosicion >= IntervaloMinBroadcast)
         {
             tiempoUltimaBroadcastPosicion = Time.time;
@@ -93,7 +77,6 @@ public class CapaComunicacion : MonoBehaviour
                 Performativa.Inform, NombreAgente, null, "ladron_visto", posicion));
         }
 
-        // Un único CFP por episodio de visión.
         if (cfpVisionActivo || HayConversacionActivaComoGestor()) return;
         cfpVisionActivo = true;
 
@@ -105,15 +88,11 @@ public class CapaComunicacion : MonoBehaviour
         }, gestorCompite: false);
     }
 
-    /// Llamado por Cerebro.OnPlayerLost. Permite lanzar un nuevo CFP de visión
-    /// la próxima vez que el ladrón vuelva a ser avistado.
     public void NotificarLadronPerdido()
     {
         cfpVisionActivo = false;
     }
 
-    /// Llamado por Cerebro.NotificarObjetoRobado.
-    /// Emite un Inform broadcast para que todos sepan que el objeto está robado.
     public void NotificarObjetoRobadoBroadcast()
     {
         Mensajes.EnviarMensaje(new MensajeFIPA(
@@ -121,13 +100,11 @@ public class CapaComunicacion : MonoBehaviour
         Debug.Log($"[{NombreAgente}] Broadcast: objeto_robado.");
     }
 
-    // ── ContractNet: iniciador (gestor) ────────────────────────────────────
-
-    /// Crea una nueva conversación ContractNet como gestor y emite el CFP.
+    // ContractNet: iniciador (gestor)
     private void IniciarCFP(List<TareaData> tareas, bool gestorCompite)
     {
         string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
-        var conv = new ConversacionContractNet(convId, RolContractNet.Gestor);
+        var conv = new ConvCNet(convId, RolContractNet.Gestor);
         conv.GestorId      = NombreAgente;
         conv.GestorCompite = gestorCompite;
         foreach (var t in tareas) conv.TareasDisponibles.Add(t);
@@ -136,9 +113,7 @@ public class CapaComunicacion : MonoBehaviour
         Debug.Log($"[{NombreAgente}] CFP conv:{convId} tareas:{tareas.Count} gestorCompite:{gestorCompite}");
     }
 
-    // ── ContractNet: receptor (contratista) ────────────────────────────────
-
-    /// Crea una conversación como contratista al recibir un CFP.
+    // ContractNet: receptor (contratista)
     private void RecibirCFP(MensajeFIPA msg)
     {
         if (conversaciones.ContainsKey(msg.conversationId))
@@ -147,7 +122,7 @@ public class CapaComunicacion : MonoBehaviour
             return;
         }
 
-        var conv = new ConversacionContractNet(msg.conversationId, RolContractNet.Contratista);
+        var conv = new ConvCNet(msg.conversationId, RolContractNet.Contratista);
         conv.GestorId = msg.emisor;
 
         if (!string.IsNullOrEmpty(msg.contenido))
@@ -163,11 +138,8 @@ public class CapaComunicacion : MonoBehaviour
         Transicion.A(this, conv, new EstadoPropose(msg.posicion), FaseContractNet.CFP);
     }
 
-    // ── punto de entrada de mensajes (llamado por ProcesarMensajes) ────────
-
     public void OnMensajeRecibido(MensajeFIPA msg)
     {
-        // Mensajes Inform puros: ya procesados por ProcesarMensajes.ActualizarModeloMundo.
         if (msg.performativa == Performativa.Inform &&
             (msg.contenido == "ladron_escuchado" ||
              msg.contenido == "ladron_visto"     ||
@@ -180,21 +152,32 @@ public class CapaComunicacion : MonoBehaviour
             return;
         }
 
+        if (msg.performativa == Performativa.QueryIf && msg.contenido == "ladron_cercano")
+        {
+            ResponderQueryBusqueda(msg);
+            return;
+        }
+
+        if (msg.performativa == Performativa.Request && msg.contenido == "asegurar_zona")
+        {
+            ResponderRequest(msg);
+            return;
+        }
+
         if (!conversaciones.TryGetValue(msg.conversationId, out var conv))
         {
-            Debug.LogWarning($"[{NombreAgente}] Mensaje para conv desconocida:{msg.conversationId}");
+            if (msg.performativa != Performativa.InformDone)
+                Debug.LogWarning($"[{NombreAgente}] Mensaje para conv desconocida:{msg.conversationId}");
             return;
         }
 
         conv.EstadoActual?.OnMensaje(this, conv, msg);
 
-        if (conv.Fase == FaseContractNet.Idle)
+        if (conv.Terminada)
             conversaciones.Remove(conv.ConversationId);
     }
 
-    // ── callback hacia Cerebro ─────────────────────────────────────────────
-
-    /// Llamado por EstadoEsperandoRespuesta cuando el gestor acepta la propuesta.
+    // callback hacia Cerebro
     public void OnTareaAsignada(TareaData tarea)
     {
         Debug.Log($"[{NombreAgente}] Tarea asignada: {tarea.tipo} destino:{tarea.DestinoEjecucion}");
@@ -205,21 +188,90 @@ public class CapaComunicacion : MonoBehaviour
             case TipoTarea.BloquearSalida2:
                 cerebro.CambiarABloquearSalida(tarea.DestinoEjecucion);
                 break;
-
             case TipoTarea.Buscar:
                 deliberativo.EstablecerObjetivo(Objetivo.Buscar);
                 break;
         }
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────
+    // QueryIf: búsqueda colaborativa
+    public void IniciarQueryBusqueda()
+    {
+        string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
+        var conv = new ConvQueryIf(convId);
+        conversaciones[convId] = conv;
+        Transicion.A(this, conv, new QueryIf());
+    }
 
-    /// Llamado por Cerebro cuando un estado de comportamiento ContractNet termina.
-    public void NotificarTareaCompletada()
+    private void ResponderQueryBusqueda(MensajeFIPA query)
+    {
+        const float umbralSegundos = 5f;
+        bool tieneInfo = cerebro.Modelo.ultimaPosicionJugador != Vector3.zero
+                         && (Time.time - cerebro.Modelo.tiempoUltimaPosicion) <= umbralSegundos;
+
+        Mensajes.EnviarMensaje(new MensajeFIPA(
+            Performativa.InformIf,
+            NombreAgente,
+            query.emisor,
+            tieneInfo ? "true" : "false",
+            tieneInfo ? cerebro.Modelo.ultimaPosicionJugador : Vector3.zero,
+            query.conversationId));
+
+        Debug.Log($"[{NombreAgente}] InformIf ladron_cercano={tieneInfo} → {query.emisor}");
+    }
+
+    public void OnResultadoQueryBusqueda(bool encontrado, Vector3 posicion)
+    {
+        cerebro.OnResultadoQueryBusqueda(encontrado, posicion);
+    }
+
+    // Request: asegurar zona adicional
+    public void IniciarRequestAsegurar()
+    {
+        string convId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
+        var conv = new ConvRequest(convId, esIniciador: true);
+        conversaciones[convId] = conv;
+        Transicion.A(this, conv, new Request());
+    }
+
+    private void ResponderRequest(MensajeFIPA request)
+    {
+        if (EstaOcupado())
+        {
+            Mensajes.EnviarMensaje(new MensajeFIPA(
+                Performativa.Refuse,
+                NombreAgente,
+                request.emisor,
+                "ocupado",
+                Vector3.zero,
+                request.conversationId));
+            Debug.Log($"[{NombreAgente}] Refuse Request asegurar_zona → ocupado");
+            return;
+        }
+
+        Mensajes.EnviarMensaje(new MensajeFIPA(
+            Performativa.Agree,
+            NombreAgente,
+            request.emisor,
+            "asegurar_zona",
+            Vector3.zero,
+            request.conversationId));
+
+        deliberativo.EstablecerObjetivo(Objetivo.AsegurarZona);
+
+        var conv = new ConvRequest(request.conversationId, esIniciador: false);
+        conv.InterlocutorId = request.emisor;
+        conversaciones[request.conversationId] = conv;
+        Transicion.A(this, conv, new EjecutarRequest());
+        Debug.Log($"[{NombreAgente}] Agree Request asegurar_zona → {request.emisor}");
+    }
+
+    public void NotificarAsegurarZonaCompletada()
     {
         foreach (var conv in conversaciones.Values)
         {
-            if (conv.Fase == FaseContractNet.Ejecutando && conv.EstadoActual is EstadoEjecutando ejec)
+            if (conv is ConvRequest req && !req.EsIniciador
+                && conv.EstadoActual is EjecutarRequest ejec)
             {
                 ejec.NotificarCompletada(this, conv);
                 return;
@@ -227,26 +279,39 @@ public class CapaComunicacion : MonoBehaviour
         }
     }
 
-    /// True si el agente está en un estado que le impide participar en un ContractNet.
+    public void NotificarTareaCompletada()
+    {
+        foreach (var conv in conversaciones.Values)
+        {
+            if (conv is ConvCNet cnet
+                && cnet.Fase == FaseContractNet.Ejecutando
+                && cnet.EstadoActual is EstadoEjecutando ejec)
+            {
+                ejec.NotificarCompletada(this, cnet);
+                return;
+            }
+        }
+    }
+
+    /// True si el agente está comprometido con una conversación que le impide
     public bool EstaOcupado()
     {
         if (deliberativo.ObjetivoActual == Objetivo.Perseguir) return true;
         foreach (var conv in conversaciones.Values)
-            if (conv.Fase == FaseContractNet.Ejecutando ||
-                conv.Fase == FaseContractNet.EsperandoComplecion) return true;
+            if (conv.BloqueaAgente()) return true;
         return false;
     }
 
-    /// True si ya existe una conversación activa en la que este agente es gestor.
     private bool HayConversacionActivaComoGestor()
     {
         foreach (var conv in conversaciones.Values)
-            if (conv.Rol == RolContractNet.Gestor && conv.Fase != FaseContractNet.Idle)
+            if (conv is ConvCNet cnet
+                && cnet.Rol == RolContractNet.Gestor
+                && !cnet.Terminada)
                 return true;
         return false;
     }
 
-    /// Devuelve las 2 salidas más cercanas a una posición dada.
     private (Vector3 s1, Vector3 s2) ObtenerSalidasCercanas(Vector3 posicion)
     {
         Vector3 s1 = Vector3.zero, s2 = Vector3.zero;

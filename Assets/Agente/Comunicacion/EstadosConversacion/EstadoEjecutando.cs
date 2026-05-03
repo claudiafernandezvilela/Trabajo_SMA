@@ -14,27 +14,27 @@ public class EstadoEjecutando : IEstadoConversacion
         this.tarea = tarea;
     }
 
-    public void OnEntrar(CapaComunicacion capa, ConversacionContractNet conv)
+    public void OnEntrar(CapaComunicacion capa, Conversacion conv)
     {
         Debug.Log($"[{capa.NombreAgente}] Ejecutando tarea:{tarea.tipo}");
         capa.OnTareaAsignada(tarea);
     }
 
-    public void Ejecutar(CapaComunicacion capa, ConversacionContractNet conv) { }
-    public void OnMensaje(CapaComunicacion capa, ConversacionContractNet conv, MensajeFIPA msg) { }
+    public void Ejecutar(CapaComunicacion capa, Conversacion conv) { }
+    public void OnMensaje(CapaComunicacion capa, Conversacion conv, MensajeFIPA msg) { }
 
     /// Llamado desde CapaComunicacion cuando el Cerebro notifica que terminó la tarea.
-    public void NotificarCompletada(CapaComunicacion capa, ConversacionContractNet conv)
+    public void NotificarCompletada(CapaComunicacion capa, ConvCNet cnet)
     {
         capa.Mensajes.EnviarMensaje(new MensajeFIPA(
             Performativa.InformDone,
             capa.NombreAgente,
-            conv.GestorId,
+            cnet.GestorId,
             tarea.Serializar(),
             Vector3.zero,
-            conv.ConversationId));
+            cnet.ConversationId));
 
         Debug.Log($"[{capa.NombreAgente}] InformDone tarea:{tarea.tipo}");
-        Transicion.A(capa, conv, new EstadoIdle(), FaseContractNet.Idle);
+        Transicion.A(capa, cnet, new EstadoIdle(), FaseContractNet.Idle);
     }
 }

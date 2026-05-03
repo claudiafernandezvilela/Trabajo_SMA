@@ -55,12 +55,16 @@ public class CerebroDeliberativo : MonoBehaviour
                 if (modelo.objetoRobado){
                     yaReviso = true;
                     cerebro.NotificarObjetoRobado();
-                    EstablecerObjetivo(Objetivo.AsegurarZona);}
+                    EstablecerObjetivo(Objetivo.AsegurarZona);
+                    // Pedir a un agente libre que también asegure otra zona.
+                    cerebro.IniciarRequestAsegurar();}
                 else
                     EstablecerObjetivo(Objetivo.Patrullar);
                 break;
 
             case Evento.AsegurarZonaTerminada:
+                // Si este agente aceptó un Request de asegurar zona, notificar InformDone.
+                cerebro.NotificarAsegurarZonaCompletada();
                 EstablecerObjetivo(Objetivo.Patrullar);
                 break;
 

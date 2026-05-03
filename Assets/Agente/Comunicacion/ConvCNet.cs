@@ -3,11 +3,11 @@ using UnityEngine;
 
 public enum RolContractNet { Gestor, Contratista }
 
-/// Propuesta de un contratista para una tarea concreta.
+/// Proposal from a contractor for a specific task.
 internal class RegistroPropuesta
 {
     public string emisor;
-    public float  puntuacion;  // distancia al destino específico de la tarea
+    public float  puntuacion;
 
     public RegistroPropuesta(string emisor, float puntuacion)
     {
@@ -16,59 +16,57 @@ internal class RegistroPropuesta
     }
 }
 
-/// Estado de una conversación ContractNet en curso.
-/// No es MonoBehaviour: vive dentro de CapaComunicacion.
-public class ConversacionContractNet
+/// State of an active ContractNet conversation.
+/// Not a MonoBehaviour — lives inside CapaComunicacion.
+public class ConvCNet : Conversacion
 {
     // ── identidad ──────────────────────────────────────────────────────────
-    public string         ConversationId { get; }
-    public RolContractNet Rol            { get; }
+    public RolContractNet  Rol  { get; }
+    public FaseContractNet Fase { get; private set; }
 
-    // ── fase y estado activo ───────────────────────────────────────────────
-    public FaseContractNet     Fase        { get; private set; }
-    public IEstadoConversacion EstadoActual { get; private set; }
+    /// Alias for InterlocutorId, kept for readability in CNet-specific code.
+    public string GestorId
+    {
+        get => InterlocutorId;
+        set => InterlocutorId = value;
+    }
 
     // ── datos de dominio ───────────────────────────────────────────────────
-    public string          GestorId          { get; set; }
-    public List<TareaData> TareasDisponibles { get; } = new List<TareaData>();
+    public List<TareaData> TareasDisponibles  { get; } = new List<TareaData>();
     public List<string>    AgentesContactados { get; } = new List<string>();
-    public float           Deadline          { get; set; }
+    public float           Deadline           { get; set; }
+    public bool            GestorCompite      { get; set; } = true;
 
-    /// Si es false el gestor no entra en el pool de candidatos durante la adjudicación
-    public bool GestorCompite { get; set; } = true;
-
-    /// Propuestas agrupadas por índice de tarea.
-    /// Clave: índice en TareasDisponibles. Valor: lista de propuestas para esa tarea.
     internal Dictionary<int, List<RegistroPropuesta>> PropuestasPorTarea { get; }
         = new Dictionary<int, List<RegistroPropuesta>>();
 
-    /// Total de propuestas recibidas (una por tarea por contratista).
-    /// El gestor espera AgentesContactados.Count * TareasDisponibles.Count propuestas
-    /// o hasta que expire el deadline.
     public int TotalPropuestasRecibidas { get; private set; }
 
     private int TotalPropuestasEsperadas =>
         AgentesContactados.Count * TareasDisponibles.Count;
 
     // ── constructor ────────────────────────────────────────────────────────
-    public ConversacionContractNet(string conversationId, RolContractNet rol)
+    public ConvCNet(string conversationId, RolContractNet rol)
+        : base(conversationId)
     {
-        ConversationId = conversationId;
-        Rol            = rol;
-        Fase           = FaseContractNet.Idle;
+        Rol  = rol;
+        Fase = FaseContractNet.Idle;
     }
 
     // ── transición ─────────────────────────────────────────────────────────
+    /// CNet overload: sets both the state and the protocol phase.
     public void SetEstado(IEstadoConversacion nuevoEstado, FaseContractNet nuevaFase)
     {
-        Fase         = nuevaFase;
-        EstadoActual = nuevoEstado;
+        Fase = nuevaFase;
+        base.SetEstado(nuevoEstado);
     }
 
-    // ── helpers para el gestor ─────────────────────────────────────────────
+    // ── BloqueaAgente ──────────────────────────────────────────────────────
+    /// Blocks the agent while adjudicating (waiting for InformDone) or executing.
+    public override bool BloqueaAgente() =>
+        Fase == FaseContractNet.Ejecutando || Fase == FaseContractNet.Adjudicando;
 
-    /// Registra la propuesta de un contratista para una tarea concreta.
-    /// tareaIdx es el índice en TareasDisponibles.
+    // ── helpers para el gestor ─────────────────────────────────────────────
     public void RegistrarPropuesta(string emisor, int tareaIdx, float puntuacion)
     {
         if (!PropuestasPorTarea.ContainsKey(tareaIdx))
@@ -76,19 +74,14 @@ public class ConversacionContractNet
 
         PropuestasPorTarea[tareaIdx].Add(new RegistroPropuesta(emisor, puntuacion));
         TotalPropuestasRecibidas++;
-
-        //Debug.Log($"[Conv {ConversationId}] Propuesta: {emisor} tarea[{tareaIdx}]" +
-                  //$"={TareasDisponibles[tareaIdx].tipo} d={puntuacion:F2}");
     }
 
     public void RegistrarRechazo(string emisor)
     {
-        // Un rechazo cuenta como una propuesta por cada tarea disponible
         TotalPropuestasRecibidas += TareasDisponibles.Count;
         Debug.Log($"[Conv {ConversationId}] {emisor} rechazó participar.");
     }
 
-    /// True cuando se han recibido todas las propuestas esperadas o expiró el deadline.
     public bool ListoParaAdjudicar =>
         TotalPropuestasRecibidas >= TotalPropuestasEsperadas || Time.time >= Deadline;
 }
